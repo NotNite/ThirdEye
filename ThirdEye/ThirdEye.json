@@ -1,0 +1,9 @@
+{
+  "Author": "NotNite",
+  "Name": "Third Eye",
+  "Punchline": "A simple encounter recording tool for FFXIV.",
+  "Description": "Records encounters in an open source file format.",
+  "InternalName": "samplePlugin",
+  "ApplicableVersion": "any",
+  "IconUrl": "https://namazu.photos/i/wzi669rw.png"
+}
