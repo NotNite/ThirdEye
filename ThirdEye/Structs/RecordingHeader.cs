@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Dalamud.Logging;
 
 namespace ThirdEye.Structs;
 
@@ -14,7 +15,9 @@ public struct RecordingHeader {
         bw.Write(Timestamp);
         bw.Write(TerritoryType);
         bw.Write(TickMs);
-
+        
+        bw.BaseStream.Seek(0, SeekOrigin.Begin);
+        PluginLog.Verbose($"RecordingHeader len: {bw.BaseStream.Length}");
         return ((MemoryStream)bw.BaseStream).ToArray();
     }
 }

@@ -34,6 +34,13 @@ public class ConfigWindow : Window, IDisposable {
         if (ImGui.Checkbox("Automatically start/stop recording", ref Plugin.Configuration.AutoRecordInCombat)) {
             Plugin.Configuration.Save();
         }
+
+        var tickrate = (int)Plugin.Configuration.TickInterval;
+        if (ImGui.InputInt("Tickrate", ref tickrate)) {
+            tickrate = Math.Clamp(tickrate, 1, 10000);
+            Plugin.Configuration.TickInterval = (ushort)tickrate;
+            Plugin.Configuration.Save();
+        }
         
         var text = Plugin.RecordingManager.IsRecording ? "Stop recording" : "Start recording";
         if (ImGui.Button(text)) {

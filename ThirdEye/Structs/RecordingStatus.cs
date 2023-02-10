@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Dalamud.Logging;
 
 namespace ThirdEye.Structs;
 
@@ -15,6 +16,8 @@ struct RecordingStatus {
         bw.Write(RemainingTime);
         bw.Write(Param);
         
+        bw.BaseStream.Seek(0, SeekOrigin.Begin);
+        PluginLog.Verbose($"RecordingStatus len: {bw.BaseStream.Length}");
         return ((MemoryStream)bw.BaseStream).ToArray();
     }
 }

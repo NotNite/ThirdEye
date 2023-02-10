@@ -4,6 +4,7 @@ using System.IO;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Statuses;
+using Dalamud.Logging;
 using ThirdEye.Structs;
 
 namespace ThirdEye;
@@ -22,11 +23,12 @@ public class RecordingManager : IDisposable {
         Plugin.ChatGui.Print("[Third Eye] Started recording.");
 
         _recording = true;
+        _lastCombatTime = DateTime.Now;
 
         var filename = $"ThirdEye_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.dat";
         var path = Path.Combine(Plugin.Configuration.OutputDirectory, filename);
         _fileStream = new FileStream(path, FileMode.Create);
-
+        
         WriteHeader();
     }
 
@@ -65,6 +67,7 @@ public class RecordingManager : IDisposable {
         var elapsed = now - _lastCombatTime;
         if (elapsed > TimeSpan.FromMilliseconds(Plugin.Configuration.TickInterval)) {
             _lastCombatTime = _lastCombatTime.AddMilliseconds(Plugin.Configuration.TickInterval);
+            PluginLog.Verbose("Recording tick");
             
             // write out self
             var localPlayer = Plugin.ClientState.LocalPlayer;
@@ -128,6 +131,7 @@ public class RecordingManager : IDisposable {
         };
 
         var bytes = fh.GetBytes();
+        PluginLog.Verbose($"Writing header: {bytes.Length}");
         _fileStream.Write(bytes, 0, bytes.Length);
     }
 
@@ -141,8 +145,10 @@ public class RecordingManager : IDisposable {
             DataSize = bytes.Length,
             Data = bytes
         };
-
-        _fileStream.Write(header.GetBytes(), 0, bytes.Length);
+        
+        var headerBytes = header.GetBytes();
+        PluginLog.Verbose($"Writing player block: {headerBytes.Length}");
+        _fileStream.Write(headerBytes, 0, headerBytes.Length);
     }
 
     private RecordingStatus[] FormStatusesFromStatusList(StatusList list) {
