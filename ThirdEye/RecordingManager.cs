@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Statuses;
@@ -15,20 +16,23 @@ public class RecordingManager : IDisposable {
 
     private bool _lastCombat;
     private DateTime _lastCombatTime = DateTime.Now;
-    
+
+    private Dictionary<long, byte[]> _lastRecordings = new();
+
     public bool IsRecording => _recording;
-    
+
     public void StartRecording() {
         if (_recording) return;
         Plugin.ChatGui.Print("[Third Eye] Started recording.");
 
         _recording = true;
         _lastCombatTime = DateTime.Now;
+        _lastRecordings.Clear();
 
         var filename = $"ThirdEye_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.dat";
         var path = Path.Combine(Plugin.Configuration.OutputDirectory, filename);
         _fileStream = new FileStream(path, FileMode.Create);
-        
+
         WriteHeader();
     }
 
@@ -38,7 +42,8 @@ public class RecordingManager : IDisposable {
 
         _recording = false;
         _lastCombatTime = DateTime.Now;
-        
+        _lastRecordings.Clear();
+
         _fileStream?.Close();
         _fileStream = null;
     }
@@ -68,7 +73,7 @@ public class RecordingManager : IDisposable {
         if (elapsed > TimeSpan.FromMilliseconds(Plugin.Configuration.TickInterval)) {
             _lastCombatTime = _lastCombatTime.AddMilliseconds(Plugin.Configuration.TickInterval);
             PluginLog.Verbose("Recording tick");
-            
+
             // write out self
             var localPlayer = Plugin.ClientState.LocalPlayer;
             if (localPlayer is not null) {
@@ -139,13 +144,21 @@ public class RecordingManager : IDisposable {
         if (_fileStream == null) return;
 
         var bytes = block.GetBytes();
+
+        if (_lastRecordings.TryGetValue(block.ContentId, out var lastBytes) && lastBytes.SequenceEqual(bytes)) {
+            PluginLog.Verbose($"Skipping block for {block.ContentId} because it's the same as the last one");
+            return;
+        }
+
+        _lastRecordings[block.ContentId] = bytes;
+
         var header = new RecordingBlockHeader {
             Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             Type = RecordingBlockType.Player,
             DataSize = bytes.Length,
             Data = bytes
         };
-        
+
         var headerBytes = header.GetBytes();
         PluginLog.Verbose($"Writing player block: {headerBytes.Length}");
         _fileStream.Write(headerBytes, 0, headerBytes.Length);
